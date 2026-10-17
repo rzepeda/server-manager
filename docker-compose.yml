@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  deployment-manager:
+    build: .
+    container_name: homeserver-deployment-manager
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /server/apps:/server/apps
+      - /server/secrets:/server/secrets
+      - /server/caddy/sites:/server/caddy/sites
+    networks:
+      - homeserver-public
+      - homeserver-data
+    environment:
+      - CHECK_INTERVAL=30
+
+networks:
+  homeserver-public:
+    external: true
+  homeserver-data:
+    external: true
