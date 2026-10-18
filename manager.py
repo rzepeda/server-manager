@@ -79,7 +79,6 @@ def check_and_deploy():
                 container.stop()
                 container.remove()
             # 5. Levantar el nuevo contenedor conectado a las redes del homeserver
-
             print(f"🚀 Iniciando contenedor {container_name}...")
             # 1. Creamos el contenedor con una sola red principal (network en singular)
             new_container = client.containers.run(
@@ -115,27 +114,3 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"❌ Error en el ciclo principal: {e}")
         time.sleep(CHECK_INTERVAL)
-
-
-
-
-
-
-            print(f"🚀 Iniciando contenedor {container_name}...")
-            # 1. Creamos el contenedor con una sola red principal (network en singular)
-            new_container = client.containers.run(
-                image=image,
-                name=container_name,
-                detach=True,
-                restart_policy={"Name": "unless-stopped"},
-                network="homeserver-public",
-                environment=environment
-            )
-            # 2. Conectamos la red de base de datos secundaria si la app lo requiere
-            if config.get("database", {}).get("postgres", False):
-                try:
-                    data_net = client.networks.get("homeserver-data")
-                    data_net.connect(new_container)
-                    print(f"🔗 {container_name} conectado a la red de datos.")
-                except docker.errors.NotFound:
-                    print("⚠️ Red 'homeserver-data' no encontrada.")
