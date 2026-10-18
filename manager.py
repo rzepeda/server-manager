@@ -26,7 +26,7 @@ def update_caddy_config(app_name, subdomain, container_name, port):
     os.makedirs(CADDY_SITES_DIR, exist_ok=True)
     caddy_file = os.path.join(CADDY_SITES_DIR, f"{app_name}.caddy")
     
-    domain_base = os.getenv("DOMAIN_BASE", "tudominio.cl")
+    domain_base = os.getenv("DOMAIN_BASE", "agentictools.uk")
     config_content = f"""{subdomain}.{domain_base} {{
     reverse_proxy {container_name}:{port}
 }}
