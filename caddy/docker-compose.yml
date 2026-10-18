@@ -1,0 +1,33 @@
+services:
+  caddy:
+    image: caddy:2
+    container_name: caddy-proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - /server/caddy/sites:/etc/caddy/sites:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - homeserver-public
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared-caddy
+    restart: unless-stopped
+    command: tunnel run
+    env_file:
+      - .env
+    networks:
+      - homeserver-public
+
+volumes:
+  caddy_data:
+  caddy_config:
+
+networks:
+  homeserver-public:
+    external: true

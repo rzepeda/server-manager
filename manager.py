@@ -10,7 +10,6 @@ CADDY_SITES_DIR = "/server/caddy/sites"
 CHECK_INTERVAL = int(os.getenv("CHECK_INTERVAL", 30))
 
 def load_secrets(app_name):
-    """Carga los secretos desde un archivo .env ubicado en disco separado."""
     secret_file = os.path.join(SECRETS_DIR, f"{app_name}.env")
     env_vars = {}
     if os.path.exists(secret_file):
@@ -22,7 +21,6 @@ def load_secrets(app_name):
     return env_vars
 
 def update_caddy_config(app_name, subdomain, container_name, port):
-    """Genera o actualiza el archivo de configuración para Caddy."""
     os.makedirs(CADDY_SITES_DIR, exist_ok=True)
     caddy_file = os.path.join(CADDY_SITES_DIR, f"{app_name}.caddy")
     
@@ -60,27 +58,30 @@ def check_and_deploy():
 
             print(f"📦 Verificando aplicación: {app_name} (Imagen: {image})")
 
-            # 1. Hacer pull de la imagen más reciente desde GHCR
-            print(f"⬇️ Descargando última versión de {image}...")
-            client.images.pull(image)
+            pulled_image = client.images.pull(image)
+            new_image_id = pulled_image.id
 
-            # 2. Cargar secretos desde disco
-            secrets = load_secrets(app_name)
-
-            # 3. Preparar variables de entorno para el contenedor
-            environment = {**secrets}
-
-            # 4. Verificar si el contenedor ya existe y recrearlo si hay cambios
             existing_containers = client.containers.list(all=True, filters={"name": container_name})
+            needs_update = True
+
+            if existing_containers:
+                container = existing_containers[0]
+                if container.image.id == new_image_id:
+                    needs_update = False
+
+            if not needs_update:
+                continue
+
+            secrets = load_secrets(app_name)
+            environment = {**secrets}
             
             if existing_containers:
                 container = existing_containers[0]
                 print(f"🔄 Reemplazando contenedor existente: {container_name}")
                 container.stop()
                 container.remove()
-            # 5. Levantar el nuevo contenedor conectado a las redes del homeserver
+
             print(f"🚀 Iniciando contenedor {container_name}...")
-            # 1. Creamos el contenedor con una sola red principal (network en singular)
             new_container = client.containers.run(
                 image=image,
                 name=container_name,
@@ -89,7 +90,7 @@ def check_and_deploy():
                 network="homeserver-public",
                 environment=environment
             )
-            # 2. Conectamos la red de base de datos secundaria si la app lo requiere
+
             if config.get("database", {}).get("postgres", False):
                 try:
                     data_net = client.networks.get("homeserver-data")
@@ -97,7 +98,7 @@ def check_and_deploy():
                     print(f"🔗 {container_name} conectado a la red de datos.")
                 except docker.errors.NotFound:
                     print("⚠️ Red 'homeserver-data' no encontrada.")
-            # 6. Configurar Caddy si es público
+
             if is_public:
                 update_caddy_config(app_name, subdomain, container_name, container_port)
 
