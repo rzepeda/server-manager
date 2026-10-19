@@ -55,6 +55,8 @@ def check_and_deploy():
             public_cfg = config.get("public", {})
             is_public = public_cfg.get("enabled", False)
             subdomain = public_cfg.get("subdomain", app_name)
+            
+            volumes = config.get("volumes", [])
 
             print(f"📦 Verificando aplicación: {app_name} (Imagen: {image})")
 
@@ -88,7 +90,8 @@ def check_and_deploy():
                 detach=True,
                 restart_policy={"Name": "unless-stopped"},
                 network="homeserver-public",
-                environment=environment
+                environment=environment,
+                volumes=volumes
             )
 
             if config.get("database", {}).get("postgres", False):
