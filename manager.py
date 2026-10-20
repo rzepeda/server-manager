@@ -63,7 +63,8 @@ def check_and_deploy():
             pulled_image = client.images.pull(image)
             new_image_id = pulled_image.id
 
-            existing_containers = client.containers.list(all=True, filters={"name": container_name})
+            matched_containers = client.containers.list(all=True, filters={"name": container_name})
+            existing_containers = [c for c in matched_containers if c.name == container_name]
             needs_update = True
 
             if existing_containers:
