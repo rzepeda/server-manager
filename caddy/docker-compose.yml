@@ -9,6 +9,7 @@ services:
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - /server/caddy/sites:/etc/caddy/sites:ro
+      - /server/data/apks:/var/www/apks:ro
       - caddy_data:/data
       - caddy_config:/config
     networks:

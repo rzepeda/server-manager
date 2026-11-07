@@ -10,6 +10,7 @@ services:
       - /server/apps:/server/apps
       - /server/secrets:/server/secrets
       - /server/caddy/sites:/server/caddy/sites
+      - /server/data/apks:/server/data/apks
       - /home/rizepe/.docker/config.json:/root/.docker/config.json:ro
     networks:
       - homeserver-public

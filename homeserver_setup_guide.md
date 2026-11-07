@@ -16,10 +16,11 @@ Asegúrate de que tu `homeserver` (con Debian/Ubuntu o distribución Linux compa
 Crea la estructura de directorios y redes necesarias que utilizará el gestor en el disco de tu servidor:
 
 ```bash
-# 1. Crear directorios base para aplicaciones, secretos y configuraciones de Caddy
+# 1. Crear directorios base para aplicaciones, secretos, APKs y configuraciones de Caddy
 sudo mkdir -p /server/apps
 sudo mkdir -p /server/secrets
 sudo mkdir -p /server/caddy/sites
+sudo mkdir -p /server/data/apks
 
 # 2. Crear las redes Docker aisladas de la arquitectura homeserver
 sudo docker network create homeserver-public
@@ -74,6 +75,7 @@ services:
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - /server/caddy/sites:/etc/caddy/sites:ro
+      - /server/data/apks:/var/www/apks:ro
       - caddy_data:/data
       - caddy_config:/config
     networks:

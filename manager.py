@@ -1,5 +1,7 @@
 import os
 import time
+import tarfile
+from io import BytesIO
 import docker
 import yaml
 
@@ -7,6 +9,7 @@ client = docker.from_env()
 APPS_DIR = "/server/apps"
 SECRETS_DIR = "/server/secrets"
 CADDY_SITES_DIR = "/server/caddy/sites"
+APKS_DIR = "/server/data/apks"
 CHECK_INTERVAL = int(os.getenv("CHECK_INTERVAL", 30))
 
 def load_secrets(app_name):
@@ -32,6 +35,20 @@ def update_caddy_config(app_name, subdomain, container_name, port):
     with open(caddy_file, "w") as f:
         f.write(config_content)
     print(f"Configuración de Caddy actualizada para {subdomain}.{domain_base}")
+
+def ensure_apk_caddy():
+    os.makedirs(CADDY_SITES_DIR, exist_ok=True)
+    caddy_file = os.path.join(CADDY_SITES_DIR, "apk-hub.caddy")
+    domain_base = os.getenv("DOMAIN_BASE", "agentictools.uk")
+    config_content = f"""http://apks.{domain_base} {{
+    root * /var/www/apks
+    file_server browse
+}}
+"""
+    if not os.path.exists(caddy_file):
+        with open(caddy_file, "w") as f:
+            f.write(config_content)
+        print(f"Configuración de Caddy creada para apks.{domain_base}")
 
 def check_and_deploy():
     if not os.path.exists(APPS_DIR):
@@ -102,6 +119,33 @@ def check_and_deploy():
                     print(f"🔗 {container_name} conectado a la red de datos.")
                 except docker.errors.NotFound:
                     print("⚠️ Red 'homeserver-data' no encontrada.")
+
+            apk_cfg = config.get("apk", {})
+            if apk_cfg.get("enabled", False):
+                ensure_apk_caddy()
+                extract_path = apk_cfg.get("container_path", "/app/app-release.apk")
+                output_filename = f"{app_name}.apk" 
+                output_filepath = os.path.join(APKS_DIR, output_filename)
+                
+                os.makedirs(APKS_DIR, exist_ok=True)
+                try:
+                    print(f"📦 Extrayendo APK desde {extract_path}...")
+                    strm, stat = new_container.get_archive(extract_path)
+                    file_obj = BytesIO()
+                    for chunk in strm:
+                        file_obj.write(chunk)
+                    file_obj.seek(0)
+                    
+                    with tarfile.open(fileobj=file_obj) as tar:
+                        member = tar.getmembers()[0]
+                        extracted_file = tar.extractfile(member)
+                        if extracted_file:
+                            with open(output_filepath, "wb") as out_f:
+                                out_f.write(extracted_file.read())
+                            
+                    print(f"✅ APK {output_filename} extraído y publicado en el Hub.")
+                except Exception as e:
+                    print(f"⚠️ No se pudo extraer el APK: {e}")
 
             if is_public:
                 update_caddy_config(app_name, subdomain, container_name, container_port)
